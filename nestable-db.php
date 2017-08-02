@@ -1,55 +1,57 @@
 <?php
 include_once 'db_buku.class.php';
-$tag_menu;
-$db= new Database();
-$db->connect();
-$tag_menu = '';
-function append_tag_menu($args){
-	global $tag_menu;
-	$tag_menu.=$args;
-}
-function get_tag(){
-	global $tag_menu;
-	return $tag_menu;
-}
-function reset_tag(){
-	global $tag_menu;
-	$tag_menu = '';
-}
-function is_have_child($category_id){
-	global $db;
-	
-	$db->sql("SELECT category_ID FROM category WHERE parent_ID='".$category_id."'");
-	if($db->numRows()>0){
-		return TRUE;
-	}else{
+class Menu{
+	private $db;
+	private $tag_menu;
+	public function __construct(){
+		$this->db= new Database();
+		$this->db->connect();
+		$this->tag_menu = '';
+	}
+	public function init(){
+		$this->db= new Database();
+		$this->db->connect();
+		$this->tag_menu = '';
+	}
+	public function append_tag_menu($args){
+		$this->tag_menu.=$args;
+	}
+	public function get_tag(){
+		return $this->tag_menu;
+	}
+	public function reset_tag(){
+		$this->tag_menu = '';
+	}
+	function is_have_child($category_id){
+		$a = new Database;
+		$a->connect();
+		$a->sql("SELECT category_ID FROM category WHERE parent_ID='".$category_id."'");
+		if($a->numRows()>0){
+			return TRUE;
+		}else{
+			return FALSE;
+		}
 		return FALSE;
 	}
-	return FALSE;
-}
-function generate_category($parent = 0){
-	global $db;
-	global $tag_menu;
-	$db->sql("SELECT * FROM `category` WHERE parent_ID='".$parent."' ORDER BY `order` ASC");
-	if($db->numRows()>0){
-		$a = $db->getResult();
-		append_tag_menu('<ol class="dd-list">');
-		foreach($a as $b){
-			//echo $b['title'];
-		append_tag_menu('<li class="dd-item" data-id="'.$b['category_ID'].'">
-			<span class="right-icon">
-				<a href="javascript:void(0)" onclick="append_form(\''.$b['category_ID'].'\')">Edit</a> | <a href="javascript:void(0)" onclick="get_par()">Hapus</a>
-			</span>
-			<div class="dd-handle" id="title_id_'.$b['category_ID'].'">'.$b['title'].'</div>
-			<div class="nestable-edit edit-id-'.$b['category_ID'].'"></div>');
-			if(is_have_child($b['category_ID'])){
-				generate_category($b['category_ID']);
+	public function generate_category($parent = 0){
+		$this->db->sql("SELECT * FROM `category` WHERE parent_ID='".$parent."' ORDER BY `order` ASC");
+		if($this->db->numRows()>0){
+			$a = $this->db->getResult();
+			$this->append_tag_menu('<ol class="dd-list">');
+			foreach($a as $b){
+				//echo $b['title'];
+			$this->append_tag_menu('<li class="dd-item" data-id="'.$b['category_ID'].'"><span class="right-icon"><a href="javascript:void(0)" onclick="append_form(\''.$b['category_ID'].'\')">Edit</a> | Hapus</span><div class="dd-handle" id="title_id_'.$b['category_ID'].'">'.$b['title'].'</div><div class="nestable-edit edit-id-'.$b['category_ID'].'"></div>');
+				if($this->is_have_child($b['category_ID'])){
+					$this->generate_category($b['category_ID']);
+				}
+				$this->append_tag_menu('</li>');
 			}
-			append_tag_menu('</li>');
+			$this->append_tag_menu('</ol>');
 		}
-		append_tag_menu('</ol>');
 	}
-}	
+	
+}
+	
 	
 ?>
 <!DOCTYPE html>
@@ -67,7 +69,6 @@ function generate_category($parent = 0){
 			display:none;
 		}
 	</style>
-	
 </head>
 <body>
 
@@ -76,12 +77,10 @@ function generate_category($parent = 0){
 
     <div class="dd" id="nestable">
 		<?php
-			// $menu = new Menu();
-			// $menu->init();
-			// $menu->generate_category();
-			// echo $menu->get_tag();
-			generate_category();
-			echo get_tag();
+			$menu = new Menu();
+			$menu->init();
+			$menu->generate_category();
+			echo $menu->get_tag();
 		?>
 	</div>
 </div>
@@ -96,8 +95,8 @@ function generate_category($parent = 0){
 	<input type="text" placeholder="Name" id="category_name" required/><button id="add_data">Save</button>
     <p><strong>Serialised Output (per list)</strong></p>
 	<form action="save_nestable_ajax.php" method="post">
-    <textarea id="nestable-output" name="nestable_output"></textarea>
-    <button type="submit" name="simpan" id="save_menu">Simpan</button>
+		<textarea id="nestable-output" name="nestable_output"></textarea>
+		<button type="submit" name="simpan" id="save_menu">Simpan</button>
 	</form>
 
 
@@ -108,30 +107,7 @@ function generate_category($parent = 0){
 
 $(document).ready(function()
 {
-	var beforePrint = function() {
-        console.log('Functionality to run before printing.');
-    };
-
-    var afterPrint = function() {
-        console.log('Functionality to run after printing');
-		alert('close');
-		document.close();
-		
-    };
-
-    if (window.matchMedia) {
-        var mediaQueryList = window.matchMedia('print');
-        mediaQueryList.addListener(function(mql) {
-            if (mql.matches) {
-                beforePrint();
-            } else {
-                afterPrint();
-            }
-        });
-    }
-
-    window.onbeforeprint = beforePrint;
-    window.onafterprint = afterPrint;
+	
 	
 	$('.hide').hide();
 	$.getJSON('add_or_edit_nestable.php?mode=get_data_select',function(data){
@@ -146,8 +122,7 @@ $(document).ready(function()
             output = list.data('output');
         if (window.JSON) {
 			data_output = window.JSON.stringify(list.nestable('serialize'));
-            output.val(data_output);//, null, 2));
-			console.log(data_output);
+            output.val(data_output);
         } else {
             output.val('[]');
         }
@@ -157,7 +132,6 @@ $(document).ready(function()
 				$('#status').html('Saved');
 				setTimeout(function(){
 					$('#status').html('Ready');
-					// location.reload();
 				},2000);
 				console.log('post to : '+data_output);
 			});
@@ -184,30 +158,19 @@ $('#add_data').click(function(){
 		location.reload();
 	});
 });
-function get_par(){
-	var a = $(this).parent().closest('span');
-	alert(''+a.target);
-}
 function append_form(id){
-	if(!$('#form_edit_id'+id).length){
-		$.getJSON('add_or_edit_nestable.php?mode=select_id&id='+id,function(data){
-			if(data!==''){
-				console.log(data);
-				var template_form = '<div class="form_edit" id="form_edit_id'+id+'"><input type="hidden" id="cat_id_'+id+'"  value="'+id+'"/><input type="text" id="title_'+id+'" value="'+data.hasil[0]['title']+'"/><br><button onclick="save_edit(\''+id+'\')">Simpan</button><button onclick="remove_me('+id+')">Cancel</button>  </div>';
-				console.log('id : '+id+' '+template_form);
-				//if(!$('#form_edit_id'+id).length){
-					$('.edit-id-'+id).append(template_form);
-					$('.edit-id-'+id).slideDown('slow');
-				//}
-				
+	$.getJSON('add_or_edit_nestable.php?mode=select_id&id='+id,function(data){
+		if(data!==''){
+			console.log(data);
+			var template_form = '<div class="form_edit" id="form_edit_id'+id+'"><input type="hidden" id="cat_id_'+id+'"  value="'+id+'"/><input type="text" id="title_'+id+'" value="'+data.hasil[0]['title']+'"/><br><button onclick="save_edit(\''+id+'\')">Simpan</button><button onclick="remove_me('+id+')">Cancel</button>  </div>';
+			console.log('id : '+id+' '+template_form);
+			if(!$('#form_edit_id'+id).length){
+				$('.edit-id-'+id).append(template_form);
+				$('.edit-id-'+id).slideDown('slow');
 			}
-		});
-		
-	}else{
-		$('.edit-id-'+id).slideUp('slow');
-				$('#form_edit_id'+id).remove();
-	}
-	
+			
+		}
+	});
 }
 function remove_me(id){
 	$('.edit-id-'+id).slideUp('slow');
@@ -227,14 +190,7 @@ function save_edit(id){
 	});
 	remove_me(id);
 }
-function printpost() {
-  if (window.print()) {
-    return false;
-  } else {
-    window.close();
-	alert('close;');
-  }
-}
+
 </script>
 </body>
 </html>
